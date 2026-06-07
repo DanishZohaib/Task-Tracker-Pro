@@ -144,24 +144,35 @@ with tab_workspace:
                             unsafe_allow_html=True
                         )
 
+def handle_add_task():
+    title = st.session_state.new_task_title.strip()
+    desc = st.session_state.new_task_desc.strip()
+    if not title:
+        st.session_state.show_error_task = "Task Title is mandatory."
+    else:
+        database.create_task(
+            title=title,
+            description=desc,
+            created_by=st.session_state.current_user
+        )
+        st.session_state.show_success_task = title
+        st.session_state.new_task_title = ""
+        st.session_state.new_task_desc = ""
+
 # Tab 2: Create New Task
 with tab_create:
     st.markdown("### ➕ Create New Task")
-    with st.form("create_task_form"):
-        task_title = st.text_input("Task Title *", placeholder="Enter the summary of the task")
-        task_description = st.text_area("Task Description", placeholder="Enter full details and guidelines for the task...")
+    
+    if st.session_state.get("show_success_task"):
+        st.success(f"Successfully created task: '{st.session_state.show_success_task}'!")
+        st.balloons()
+        st.session_state.show_success_task = ""
         
-        submit_btn = st.form_submit_button("Add Task to Workspace", use_container_width=True)
+    if st.session_state.get("show_error_task"):
+        st.error(st.session_state.show_error_task)
+        st.session_state.show_error_task = ""
         
-        if submit_btn:
-            if not task_title.strip():
-                st.error("Task Title is mandatory.")
-            else:
-                database.create_task(
-                    title=task_title.strip(),
-                    description=task_description.strip(),
-                    created_by=st.session_state.current_user
-                )
-                st.success(f"Successfully created task: '{task_title.strip()}'!")
-                st.balloons()
-                st.rerun()
+    st.text_input("Task Title *", placeholder="Enter the title or summary of the task", key="new_task_title")
+    st.text_area("Task Description", placeholder="Enter full details and guidelines for the task...", key="new_task_desc")
+    
+    st.button("Add Task to Workspace", use_container_width=True, on_click=handle_add_task)

@@ -73,7 +73,7 @@ st.markdown(
     <div style='background-color: #F8FAFC; border-radius: 8px; padding: 15px; border: 1px solid #E2E8F0; text-align: center;'>
         <small style='color: #475569;'>
             <b>TaskTracker Pro SOP</b><br>
-            Conceptualized & Designed by <b>{FOOTER_CREATOR}</b><br>
+            <b>{FOOTER_CREATOR}</b><br>
             Compliance Standard: V1.0.0
         </small>
     </div>
