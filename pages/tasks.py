@@ -6,6 +6,11 @@ from config import AGING_HIGH_THRESHOLD_DAYS, AGING_MEDIUM_THRESHOLD_DAYS
 
 inject_custom_css()
 
+if "current_user" not in st.session_state or st.session_state.current_user is None:
+    st.warning("Please log in first to access the Task Manager.")
+    st.switch_page("app.py")
+    st.stop()
+
 st.title("📝 Task Manager")
 st.write(f"Logged in as: **{st.session_state.current_user}**")
 
@@ -25,6 +30,22 @@ def get_priority_details(created_dt, status):
         return "Medium", "🟡", age_days
     else:
         return "Normal", "🟢", age_days
+
+def save_task_changes(task_id):
+    title_key = f"edit_title_{task_id}"
+    desc_key = f"edit_desc_{task_id}"
+    if title_key in st.session_state and desc_key in st.session_state:
+        title_val = st.session_state[title_key].strip()
+        desc_val = st.session_state[desc_key].strip()
+        if title_val:
+            database.edit_task(
+                task_id=task_id,
+                title=title_val,
+                description=desc_val,
+                edited_by=st.session_state.current_user
+            )
+            st.session_state[f"toggle_edit_{task_id}"] = False
+            st.session_state[f"show_success_edit_{task_id}"] = True
 
 # Create tabs for Workspace operations
 tab_workspace, tab_create = st.tabs(["📋 Tasks Board", "➕ Create New Task"])
@@ -88,24 +109,15 @@ with tab_workspace:
                             # Trigger Edit form visibility for this specific task
                             edit_expanded = st.toggle("Edit Task Fields", key=f"toggle_edit_{task.task_id}")
                             
+                        if st.session_state.get(f"show_success_edit_{task.task_id}"):
+                            st.success("Changes saved!")
+                            del st.session_state[f"show_success_edit_{task.task_id}"]
+
                         if edit_expanded:
                             with st.form(key=f"edit_form_{task.task_id}"):
-                                new_title = st.text_input("Task Title", value=task.task_title)
-                                new_description = st.text_area("Task Description", value=task.task_description or "")
-                                submit_edit = st.form_submit_button("Save Changes", use_container_width=True)
-                                
-                                if submit_edit:
-                                    if new_title.strip():
-                                        database.edit_task(
-                                            task_id=task.task_id,
-                                            title=new_title.strip(),
-                                            description=new_description.strip(),
-                                            edited_by=st.session_state.current_user
-                                        )
-                                        st.success("Changes saved!")
-                                        st.rerun()
-                                    else:
-                                        st.error("Task title cannot be empty.")
+                                new_title = st.text_input("Task Title", value=task.task_title, key=f"edit_title_{task.task_id}")
+                                new_description = st.text_area("Task Description", value=task.task_description or "", key=f"edit_desc_{task.task_id}")
+                                submit_edit = st.form_submit_button("Save Changes", use_container_width=True, on_click=save_task_changes, args=(task.task_id,))
                                         
         # RIGHT COLUMN: Completed Tasks (Locked Permanently)
         with col_right:
@@ -143,36 +155,93 @@ with tab_workspace:
                             """,
                             unsafe_allow_html=True
                         )
-
-def handle_add_task():
-    title = st.session_state.new_task_title.strip()
-    desc = st.session_state.new_task_desc.strip()
-    if not title:
-        st.session_state.show_error_task = "Task Title is mandatory."
-    else:
-        database.create_task(
-            title=title,
-            description=desc,
-            created_by=st.session_state.current_user
-        )
-        st.session_state.show_success_task = title
-        st.session_state.new_task_title = ""
-        st.session_state.new_task_desc = ""
-
 # Tab 2: Create New Task
 with tab_create:
     st.markdown("### ➕ Create New Task")
     
     if st.session_state.get("show_success_task"):
+        st.markdown(
+            """
+            <div class="checkmark-wrapper">
+              <svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+                <circle class="checkmark__circle" cx="26" cy="26" r="25" fill="none"/>
+                <path class="checkmark__check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+              </svg>
+            </div>
+            <style>
+            .checkmark-wrapper {
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              margin-top: 10px;
+              margin-bottom: 20px;
+            }
+            .checkmark {
+              width: 60px;
+              height: 60px;
+              border-radius: 50%;
+              display: block;
+              stroke-width: 3;
+              stroke: #fff;
+              stroke-miterlimit: 10;
+              box-shadow: inset 0px 0px 0px #10B981;
+              animation: fill .4s ease-in-out .4s forwards, scale .3s ease-in-out .9s forwards;
+            }
+            .checkmark__circle {
+              stroke-dasharray: 166;
+              stroke-dashoffset: 166;
+              stroke-width: 3;
+              stroke-miterlimit: 10;
+              stroke: #10B981;
+              fill: none;
+              animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+            }
+            .checkmark__check {
+              transform-origin: 50% 50%;
+              stroke-dasharray: 48;
+              stroke-dashoffset: 48;
+              animation: stroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.8s forwards;
+            }
+            @keyframes stroke {
+              100% {
+                stroke-dashoffset: 0;
+              }
+            }
+            @keyframes scale {
+              0%, 100% {
+                transform: none;
+              }
+              50% {
+                transform: scale3d(1.1, 1.1, 1);
+              }
+            }
+            @keyframes fill {
+              100% {
+                box-shadow: inset 0px 0px 0px 40px #10B981;
+              }
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
         st.success(f"Successfully created task: '{st.session_state.show_success_task}'!")
-        st.balloons()
         st.session_state.show_success_task = ""
         
-    if st.session_state.get("show_error_task"):
-        st.error(st.session_state.show_error_task)
-        st.session_state.show_error_task = ""
+    with st.form(key="create_task_form", clear_on_submit=True):
+        title = st.text_input("Task Title *", placeholder="Enter the title or summary of the task")
+        desc = st.text_area("Task Description", placeholder="Enter full details and guidelines for the task...")
+        submit_btn = st.form_submit_button("Add Task to Workspace", use_container_width=True)
         
-    st.text_input("Task Title *", placeholder="Enter the title or summary of the task", key="new_task_title")
-    st.text_area("Task Description", placeholder="Enter full details and guidelines for the task...", key="new_task_desc")
-    
-    st.button("Add Task to Workspace", use_container_width=True, on_click=handle_add_task)
+        if submit_btn:
+            title_stripped = title.strip()
+            desc_stripped = desc.strip()
+            if not title_stripped:
+                st.error("Task Title is mandatory.")
+            else:
+                database.create_task(
+                    title=title_stripped,
+                    description=desc_stripped,
+                    created_by=st.session_state.current_user
+                )
+                st.session_state.show_success_task = title_stripped
+                st.rerun()

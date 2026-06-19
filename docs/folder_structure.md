@@ -18,7 +18,7 @@ Todo-app/
 ├── pages/                     # Individual multi-page scripts run by Streamlit Router
 │   ├── dashboard.py           # Payroll Dashboard (Plotly analytics, aging pending list)
 │   ├── tasks.py               # Tasks Workspace (Form creations, inline editing, task locking)
-│   ├── executive_summary.py   # Management Overview & download control buttons
+│   ├── payroll_tasks_summary.py # Payroll Tasks Summary overview & download control buttons
 │   ├── audit_trail.py         # Chronological immutable security logs
 │   ├── sop.py                 # Standard Operating Procedure compliance rules page
 │   └── user_manual.py         # End-user navigation FAQ booklet

@@ -18,7 +18,7 @@ TaskTracker Pro is a responsive, multi-user task management application designed
 Use the **Sidebar Navigation** to switch between different workspaces:
 1. **Performance & Stats:**
    - **Payroll Dashboard:** Visual charts, metrics, and list of oldest pending work.
-   - **Executive Summary:** Overall workloads, top users, monthly historical records, and report downloads (PDF/Excel/CSV).
+   - **Payroll Tasks Summary:** Overall workloads, top users, monthly historical records, and report downloads (PDF/Excel/CSV).
 2. **Task Management:**
    - **Task Manager:** Create new tasks, update pending actions, and close completed items.
    - **Audit Trail:** Comprehensive transaction logger with date, user, and keyword search filters.
@@ -58,7 +58,7 @@ Use the **Sidebar Navigation** to switch between different workspaces:
 - **Productivity Trend:** Chronological timeline tracking monthly completions.
 
 ### 3.6 Reports Export
-- Download report documents (PDF, Excel, CSV) from the **Executive Summary** page.
+- Download report documents (PDF, Excel, CSV) from the **Payroll Tasks Summary** page.
 - Apply filters on the **Audit Trail** page to export specific dates, users, or keywords.
 
 ---

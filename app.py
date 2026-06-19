@@ -23,10 +23,11 @@ if "current_user" not in st.session_state:
 users = database.get_users()
 user_list = [u.user_name for u in users]
 
-# Left side branding header
-st.sidebar.markdown(f"# 📋 TaskTracker Pro")
-st.sidebar.markdown("`Track. Monitor. Complete.`")
-st.sidebar.markdown("---")
+# Left side branding header (rendered only when logged out)
+if st.session_state.current_user is None:
+    st.sidebar.markdown(f"# 📋 TaskTracker Pro")
+    st.sidebar.markdown("`Track. Monitor. Complete.`")
+    st.sidebar.markdown("---")
 
 if st.session_state.current_user is None:
     # Beautiful landing / registration page
@@ -91,18 +92,50 @@ if st.session_state.current_user is None:
         unsafe_allow_html=True
     )
 else:
-    # Sidebar user details
-    st.sidebar.markdown(f"👤 **Logged in as:**\n**{st.session_state.current_user}**")
+    # Sidebar user details at the top of the menu
+    user_str = st.session_state.current_user
+    if " (ID: " in user_str:
+        user_name, user_id_part = user_str.split(" (ID: ")
+        user_id = user_id_part.rstrip(")")
+    else:
+        user_name = user_str
+        user_id = ""
+        
+    st.sidebar.markdown(
+        f"""
+        <div class="user-card">
+          <div class="user-avatar">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="url(#user-grad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 18px; height: 18px;">
+              <defs>
+                <linearGradient id="user-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" style="stop-color:#4F46E5;stop-opacity:1" />
+                  <stop offset="100%" style="stop-color:#8B5CF6;stop-opacity:1" />
+                </linearGradient>
+              </defs>
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </div>
+          <div class="user-details">
+            <span class="user-label">Active Session</span>
+            <span class="user-name">{user_name}</span>
+            <span class="user-id">ID: {user_id}</span>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    
     if st.sidebar.button("Logout / Switch User", use_container_width=True, key="logout_btn"):
         st.session_state.current_user = None
         st.rerun()
         
-    st.sidebar.markdown("---")
+    st.sidebar.markdown("<hr class='sidebar-divider' style='margin: 10px 0 20px 0; border: none; border-top: 1px solid rgba(0,0,0,0.1);'>", unsafe_allow_html=True)
     
     # Navigation mapping using Streamlit Pages
     dashboard_page = st.Page("pages/dashboard.py", title="Payroll Dashboard", icon="📊", default=True)
     tasks_page = st.Page("pages/tasks.py", title="Task Manager", icon="📝")
-    summary_page = st.Page("pages/executive_summary.py", title="Executive Summary", icon="📈")
+    summary_page = st.Page("pages/payroll_tasks_summary.py", title="Payroll Tasks Summary", icon="📈")
     audit_page = st.Page("pages/audit_trail.py", title="Audit Trail", icon="🔒")
     sop_page = st.Page("pages/sop.py", title="SOP Compliance", icon="📋")
     manual_page = st.Page("pages/user_manual.py", title="User Manual", icon="📖")
@@ -113,5 +146,16 @@ else:
         "Standard Guidelines": [sop_page, manual_page]
     })
     pg.run()
+    
+    # Sidebar branding header at the bottom of the menu
+    st.sidebar.markdown(
+        """
+        <div class="sidebar-branding">
+          <div class="branding-title">📋 TaskTracker Pro</div>
+          <div class="branding-tagline">Track. Monitor. Complete.</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
     
     draw_footer()

@@ -73,8 +73,8 @@ with st.expander("5. Dashboard Explanation"):
 with st.expander("6. Reports & Export Features"):
     st.markdown(
         """
-        You can export logs and executive summaries at any time:
-        - Go to the **Executive Summary** page to download full workbook logs (Excel, CSV) or formatted summary dossiers (PDF).
+        You can export logs and payroll tasks summaries at any time:
+        - Go to the **Payroll Tasks Summary** page to download full workbook logs (Excel, CSV) or formatted summary dossiers (PDF).
         - Go to the **Audit Trail** page to filter specific intervals, usernames, or actions, and export that filtered view.
         """
     )

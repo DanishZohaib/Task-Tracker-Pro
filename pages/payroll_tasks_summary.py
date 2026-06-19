@@ -8,7 +8,7 @@ from config import AGING_HIGH_THRESHOLD_DAYS, AGING_MEDIUM_THRESHOLD_DAYS, COLOR
 
 inject_custom_css()
 
-st.title("📈 Executive Summary")
+st.title("📈 Payroll Tasks Summary")
 st.write("Management-level review and productivity audit reports.")
 
 tasks = database.get_tasks()
@@ -67,7 +67,7 @@ else:
     med_aging = len(df[(df["Status"] == "Pending") & (df["Priority"] == "Medium")])
     norm_aging = len(df[(df["Status"] == "Pending") & (df["Priority"] == "Normal")])
     
-    # 1. Executive Summary KPIs
+    # 1. Payroll Tasks Summary KPIs
     st.markdown("<div class='section-header'>Overall Status</div>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns(3)
     
@@ -145,7 +145,7 @@ else:
     st.table(months_df)
     
     # 4. EXPORTS AND DOWNLOADS SECTION
-    st.markdown("<div class='section-header'>💼 Export Executive Reports</div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-header'>💼 Export Payroll Reports</div>", unsafe_allow_html=True)
     st.write("Download administrative reports summarizing all workspace tasks in PDF, Excel, or CSV format.")
     
     # Prep metrics dict for PDF
@@ -165,7 +165,7 @@ else:
         st.download_button(
             label="📄 Download PDF Summary",
             data=pdf_data,
-            file_name=f"tasktracker_executive_summary_{datetime.now().strftime('%Y%m%d')}.pdf",
+            file_name=f"tasktracker_payroll_summary_{datetime.now().strftime('%Y%m%d')}.pdf",
             mime="application/pdf",
             use_container_width=True
         )

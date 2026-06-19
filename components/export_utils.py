@@ -154,7 +154,7 @@ def export_to_pdf(df: pd.DataFrame, kpis: dict) -> bytes:
     story.append(Paragraph(TAGLINE, subtitle_style))
     story.append(Spacer(1, 10))
     
-    # Executive KPI Dashboard Grid
+    # Payroll KPI Dashboard Grid
     kpi_data = [
         [
             Paragraph("<b>Total Tasks:</b>", body_style), Paragraph(str(kpis.get("total_tasks", 0)), body_style),
@@ -180,7 +180,7 @@ def export_to_pdf(df: pd.DataFrame, kpis: dict) -> bytes:
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
     ]))
     
-    story.append(Paragraph("Executive Performance Metrics", section_title_style))
+    story.append(Paragraph("Payroll Performance Metrics", section_title_style))
     story.append(kpi_table)
     story.append(Spacer(1, 15))
     
