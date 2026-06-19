@@ -4,9 +4,28 @@ from datetime import datetime
 from sqlalchemy import create_engine, Column, Integer, String, Text, Boolean, DateTime, ForeignKey, desc
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
-# Setup SQLite database in the workspace
-DATABASE_URL = "sqlite:///tasktracker.db"
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+# Setup database: dynamic support for Neon (PostgreSQL) and SQLite fallback
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if not DATABASE_URL:
+    try:
+        import streamlit as st
+        DATABASE_URL = st.secrets.get("DATABASE_URL")
+    except Exception:
+        pass
+
+if not DATABASE_URL:
+    DATABASE_URL = "sqlite:///tasktracker.db"
+
+# SQLAlchemy 2.0 requires postgresql:// instead of postgres://
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+# Only apply check_same_thread if SQLite database is used
+if DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+else:
+    engine = create_engine(DATABASE_URL)
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, expire_on_commit=False)
 Base = declarative_base()
 
