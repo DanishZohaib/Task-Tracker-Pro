@@ -1,7 +1,7 @@
 # TaskTracker Pro
 > **Track. Monitor. Complete.**
 
-TaskTracker Pro is a modern, colorful, professional, and easy-to-use Multi-User Task & Todo Management Application built using Python, Streamlit, and SQLite. It helps individuals and teams track, manage, and monitor daily work activities with strict audit logging and compliance rules.
+TaskTracker Application built using Python, Streamlit, and SQLite. Task management application is a modern, professional, and easy-to-use Multi-User Task It helps individuals and teams track, manage, and monitor daily work activities with strict audit logging and compliance rules.
 
 **Application Idea By:** Danish Zohaib
 
