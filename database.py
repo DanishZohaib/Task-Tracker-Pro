@@ -13,7 +13,12 @@ if not DATABASE_URL:
     except Exception:
         pass
 
-if not DATABASE_URL:
+if DATABASE_URL:
+    # Clean up the string to remove any accidentally pasted quotes or variable prefixes
+    DATABASE_URL = DATABASE_URL.strip().strip("'").strip('"')
+    if DATABASE_URL.startswith("DATABASE_URL="):
+        DATABASE_URL = DATABASE_URL.replace("DATABASE_URL=", "", 1).strip().strip("'").strip('"')
+else:
     DATABASE_URL = "sqlite:///tasktracker.db"
 
 # SQLAlchemy 2.0 requires postgresql:// instead of postgres://
