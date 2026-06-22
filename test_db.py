@@ -6,10 +6,67 @@ def test_workflow():
     print("Initializing Database...")
     database.init_db()
     
-    # 1. Create a user
-    print("Testing User Registration...")
+    # NEW: Test OTP and Mobile features on User Registration
+    print("Testing User Registration with Mobile and OTP...")
+    user_mobile = "+1234567890"
+    user_otp = database.create_user("OTP User", "pass123", full_name="OTP FullName", mobile_number=user_mobile)
+    assert user_otp is not None, "Failed to create user with mobile"
+    assert user_otp.is_verified is False, "New user with mobile should not be verified yet"
+    assert user_otp.full_name == "OTP FullName", "Full name was not set"
+    assert user_otp.mobile_number == user_mobile, "Mobile number was not set"
+    print("Success: New user created with mobile number in pending state.")
+    
+    # Test mobile uniqueness
+    try:
+        database.create_user("Another User", "pass123", full_name="Another", mobile_number=user_mobile)
+        assert False, "Should have raised ValueError for duplicate mobile"
+    except ValueError as ve:
+        print(f"Success: Unique mobile constraint raised expected error: {ve}")
+        
+    # Test OTP set and verification
+    from datetime import datetime, timedelta
+    print("Testing OTP Assignment & Verification...")
+    import otp_service
+    otp_code = otp_service.generate_otp()
+    expiry = datetime.utcnow() + timedelta(minutes=10)
+    database.update_user_otp("OTP User", otp_code, expiry)
+    
+    # Verify incorrect OTP fails
+    assert database.verify_user_otp("OTP User", "000000") is False, "Verification should fail with wrong OTP"
+    
+    # Verify correct OTP succeeds
+    assert database.verify_user_otp("OTP User", otp_code) is True, "Verification failed with correct OTP"
+    
+    # Verify OTP is wiped after use (prevent reuse)
+    db_user = database.get_user_by_name("OTP User")
+    assert db_user.is_verified is True, "User should be marked verified now"
+    assert db_user.otp_code is None, "OTP code should be cleared after verification"
+    print("Success: OTP verification and prevention of reuse verified.")
+    
+    # Test OTP Expiry
+    print("Testing OTP Expiry...")
+    expired_otp = "888888"
+    past_expiry = datetime.utcnow() - timedelta(minutes=1)
+    database.update_user_otp("OTP User", expired_otp, past_expiry)
+    assert database.verify_user_otp("OTP User", expired_otp) is False, "Expired OTP should fail verification"
+    print("Success: Expired OTP was rejected.")
+    
+    # Test Password Reset via OTP helper
+    print("Testing Password Reset via Mobile OTP...")
+    found_by_mobile = database.get_user_by_mobile(user_mobile)
+    assert found_by_mobile is not None, "User should be lookupable by mobile"
+    assert found_by_mobile.user_name == "OTP User", "User name mismatch by mobile lookup"
+    
+    reset_success = database.update_user_password("OTP User", "newsecret999")
+    assert reset_success is True, "Failed to reset password"
+    assert database.verify_user("OTP User", "newsecret999") is True, "Failed to authenticate with new password"
+    print("Success: Password reset via OTP verified.")
+
+    # 1. Create a user (legacy backwards compatibility)
+    print("Testing Legacy User Registration (Backward Compatibility)...")
     user = database.create_user("Test Danish Zohaib", "password123")
     assert user is not None, "Failed to create user"
+    assert user.is_verified is True, "Legacy user without mobile should be auto-verified"
     print(f"Success: Registered user ID {user.user_id} - '{user.user_name}'")
     
     # 2. Create a task
@@ -70,10 +127,46 @@ def test_workflow():
     assert "COMPLETE" in actions, "COMPLETE action not logged"
     print("Success: Permanent audit trail verified.")
     
+    # 7. Verify Admin and Role-Based features
+    print("Verifying Admin Seeding & Helpers...")
+    admin = database.get_user_by_name("admin")
+    assert admin is not None, "Admin user not seeded"
+    assert admin.role == "admin", "Admin role not correct"
+    assert admin.is_active is True, "Admin should be active"
+    assert admin.is_verified is True, "Admin should be verified"
+    assert database.verify_user("admin", "adminpassword") is True, "Failed to login as admin"
+    print("Success: Default admin seeded and verified.")
+
+    print("Verifying Account Deactivation & Status...")
+    # Deactivate OTP User
+    assert database.update_user_status("OTP User", False) is True, "Failed to deactivate user"
+    deactivated = database.get_user_by_name("OTP User")
+    assert deactivated.is_active is False, "User is_active did not change to False"
+    
+    # Activate back
+    assert database.update_user_status("OTP User", True) is True, "Failed to activate user"
+    activated = database.get_user_by_name("OTP User")
+    assert activated.is_active is True, "User is_active did not change to True"
+    print("Success: User activation/deactivation toggling verified.")
+
+    print("Verifying Admin Password Override...")
+    # Admin resets password for OTP User
+    assert database.admin_reset_password("OTP User", "adminoverrider") is True, "Failed password override"
+    assert database.verify_user("OTP User", "adminoverrider") is True, "Password reset override failed to verify"
+    print("Success: Admin password reset override verified.")
+    
     print("\nALL FUNCTIONAL DATABASE TESTS PASSED SUCCESSFULLY!")
 
 if __name__ == "__main__":
     # Remove old database if exists to start fresh
     if os.path.exists("tasktracker.db"):
-        os.remove("tasktracker.db")
+        try:
+            os.remove("tasktracker.db")
+        except PermissionError:
+            try:
+                from database import Base, engine
+                Base.metadata.drop_all(bind=engine)
+                print("Database locked by another process. Dropped all tables to clean instead.")
+            except Exception as cleanup_err:
+                print(f"Clean up warning: {cleanup_err}")
     test_workflow()

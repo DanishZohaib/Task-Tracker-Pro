@@ -42,6 +42,13 @@ class User(Base):
     user_name = Column(String, unique=True, nullable=False)
     password = Column(String, nullable=False)
     created_date = Column(DateTime, default=datetime.utcnow)
+    full_name = Column(String, nullable=True)
+    mobile_number = Column(String, unique=True, nullable=True)
+    is_verified = Column(Boolean, default=False, nullable=False)
+    otp_code = Column(String, nullable=True)
+    otp_expiry = Column(DateTime, nullable=True)
+    role = Column(String, default="user", nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
 
 class Task(Base):
     __tablename__ = "tasks"
@@ -73,6 +80,54 @@ class AuditLog(Base):
 # Create all tables
 def init_db():
     Base.metadata.create_all(bind=engine)
+    # Dynamic schema migration for existing sqlite/postgresql databases
+    from sqlalchemy import inspect, text
+    db = SessionLocal()
+    try:
+        inspector = inspect(engine)
+        columns = [c['name'] for c in inspector.get_columns('users')]
+        
+        with engine.begin() as conn:
+            if 'full_name' not in columns:
+                conn.execute(text("ALTER TABLE users ADD COLUMN full_name VARCHAR"))
+            if 'mobile_number' not in columns:
+                conn.execute(text("ALTER TABLE users ADD COLUMN mobile_number VARCHAR"))
+                conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_mobile ON users (mobile_number)"))
+            if 'is_verified' not in columns:
+                conn.execute(text("ALTER TABLE users ADD COLUMN is_verified BOOLEAN DEFAULT FALSE"))
+            if 'otp_code' not in columns:
+                conn.execute(text("ALTER TABLE users ADD COLUMN otp_code VARCHAR"))
+            if 'otp_expiry' not in columns:
+                conn.execute(text("ALTER TABLE users ADD COLUMN otp_expiry TIMESTAMP"))
+            if 'role' not in columns:
+                conn.execute(text("ALTER TABLE users ADD COLUMN role VARCHAR DEFAULT 'user'"))
+            if 'is_active' not in columns:
+                conn.execute(text("ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT TRUE"))
+            
+            # Data migration: Set existing users (who have NULL mobile number) to verified
+            conn.execute(text("UPDATE users SET is_verified = 1 WHERE mobile_number IS NULL"))
+            conn.execute(text("UPDATE users SET role = 'user' WHERE role IS NULL"))
+            conn.execute(text("UPDATE users SET is_active = 1 WHERE is_active IS NULL"))
+            
+        # Seed default admin user if not exists
+        admin_user = db.query(User).filter(User.user_name == "admin").first()
+        if not admin_user:
+            admin_user = User(
+                user_name="admin",
+                password=hash_password("adminpassword"),
+                full_name="Administrator",
+                mobile_number="+15550199",
+                role="admin",
+                is_verified=True,
+                is_active=True
+            )
+            db.add(admin_user)
+            db.commit()
+            print("Seeded default admin user.")
+    except Exception as e:
+        print(f"Migration / Seeding detail: {e}")
+    finally:
+        db.close()
 
 # Helper function to get DB session
 def get_db():
@@ -100,18 +155,128 @@ def get_user_by_name(username: str):
 def hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
 
-def create_user(username: str, password: str):
+def create_user(username: str, password: str, full_name: str = None, mobile_number: str = None):
     db = SessionLocal()
     try:
         # Check if user already exists
         existing = db.query(User).filter(User.user_name == username).first()
         if existing:
             return existing
-        user = User(user_name=username, password=hash_password(password))
+        
+        # Ensure mobile number uniqueness at application level
+        if mobile_number:
+            existing_mobile = db.query(User).filter(User.mobile_number == mobile_number).first()
+            if existing_mobile:
+                raise ValueError("Mobile number already registered by another user.")
+                
+        user = User(
+            user_name=username, 
+            password=hash_password(password),
+            full_name=full_name,
+            mobile_number=mobile_number,
+            is_verified=False if mobile_number else True,  # auto-verify if no mobile number is specified (for tests/legacy support)
+            role="user",
+            is_active=True
+        )
         db.add(user)
         db.commit()
         db.refresh(user)
         return user
+    finally:
+        db.close()
+
+def get_user_by_mobile(mobile_number: str):
+    db = SessionLocal()
+    try:
+        return db.query(User).filter(User.mobile_number == mobile_number).first()
+    finally:
+        db.close()
+
+def update_user_otp(username: str, otp_code: str, otp_expiry: datetime):
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.user_name == username).first()
+        if user:
+            user.otp_code = otp_code
+            user.otp_expiry = otp_expiry
+            db.commit()
+            db.refresh(user)
+            return user
+        return None
+    finally:
+        db.close()
+
+def verify_user_otp(username: str, otp_code: str) -> bool:
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.user_name == username).first()
+        if not user or not user.otp_code or not user.otp_expiry:
+            return False
+        
+        # Expiry check
+        if datetime.utcnow() > user.otp_expiry:
+            return False
+            
+        if user.otp_code == otp_code:
+            user.is_verified = True
+            # Prevent OTP reuse
+            user.otp_code = None
+            user.otp_expiry = None
+            db.commit()
+            return True
+        return False
+    finally:
+        db.close()
+
+def update_user_password(username: str, password_raw: str) -> bool:
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.user_name == username).first()
+        if user:
+            user.password = hash_password(password_raw)
+            user.is_verified = True  # Verified because they completed reset flow
+            user.otp_code = None
+            user.otp_expiry = None
+            db.commit()
+            return True
+        return False
+    finally:
+        db.close()
+
+def update_user_status(username: str, is_active: bool) -> bool:
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.user_name == username).first()
+        if user:
+            user.is_active = is_active
+            db.commit()
+            return True
+        return False
+    finally:
+        db.close()
+
+def update_user_role(username: str, role: str) -> bool:
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.user_name == username).first()
+        if user:
+            user.role = role
+            db.commit()
+            return True
+        return False
+    finally:
+        db.close()
+
+def admin_reset_password(username: str, new_password_raw: str) -> bool:
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.user_name == username).first()
+        if user:
+            user.password = hash_password(new_password_raw)
+            user.is_active = True
+            db.commit()
+            return True
+        return False
     finally:
         db.close()
 

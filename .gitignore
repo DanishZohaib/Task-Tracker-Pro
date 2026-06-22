@@ -3,3 +3,4 @@ __pycache__/
 .DS_Store
 tasktracker.db
 .env
+sms_gateway_log.txt
