@@ -1,4 +1,9 @@
 import streamlit as st
+
+if "current_user" not in st.session_state or st.session_state.current_user is None:
+    st.warning("Please log in to access this page.")
+    st.stop()
+
 from components.custom_styles import inject_custom_css
 from config import FOOTER_CREATOR
 

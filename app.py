@@ -30,8 +30,8 @@ if "temp_reset_mobile" not in st.session_state:
 users = database.get_users()
 user_list = [u.user_name for u in users]
 
-# Left side branding header & Developer Helper (rendered only when logged out)
-if st.session_state.current_user is None:
+def show_login():
+    # Left side branding header & Developer Helper (rendered only when logged out)
     st.sidebar.markdown(f"# 📋 TaskTracker Pro")
     st.sidebar.markdown("`Track. Monitor. Complete.`")
     st.sidebar.markdown("---")
@@ -51,7 +51,6 @@ if st.session_state.current_user is None:
             f"*(Sent mock SMS to {pending_user.mobile_number})*"
         )
 
-if st.session_state.current_user is None:
     # Beautiful landing / registration / verification page
     st.markdown("<h1 style='text-align: center; color: #4F46E5;'>📋 TaskTracker Pro</h1>", unsafe_allow_html=True)
     st.markdown("<h3 style='text-align: center; color: #6B7280; font-weight: 400;'>Track. Monitor. Complete.</h3>", unsafe_allow_html=True)
@@ -338,6 +337,11 @@ if st.session_state.current_user is None:
         """,
         unsafe_allow_html=True
     )
+
+if st.session_state.current_user is None:
+    login_page = st.Page(show_login, title="Login", icon="🔑")
+    pg = st.navigation([login_page], position="hidden")
+    pg.run()
 else:
     # Sidebar user details at the top of the menu
     user_str = st.session_state.current_user

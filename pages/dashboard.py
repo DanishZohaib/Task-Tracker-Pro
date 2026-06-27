@@ -1,4 +1,9 @@
 import streamlit as st
+
+if "current_user" not in st.session_state or st.session_state.current_user is None:
+    st.warning("Please log in to access this page.")
+    st.stop()
+
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
