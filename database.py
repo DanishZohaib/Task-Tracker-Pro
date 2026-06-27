@@ -105,9 +105,9 @@ def init_db():
                 conn.execute(text("ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT TRUE"))
             
             # Data migration: Set existing users (who have NULL mobile number) to verified
-            conn.execute(text("UPDATE users SET is_verified = 1 WHERE mobile_number IS NULL"))
+            conn.execute(text("UPDATE users SET is_verified = TRUE WHERE mobile_number IS NULL"))
             conn.execute(text("UPDATE users SET role = 'user' WHERE role IS NULL"))
-            conn.execute(text("UPDATE users SET is_active = 1 WHERE is_active IS NULL"))
+            conn.execute(text("UPDATE users SET is_active = TRUE WHERE is_active IS NULL"))
             
         # Seed default admin user if not exists
         admin_user = db.query(User).filter(User.user_name == "admin").first()
